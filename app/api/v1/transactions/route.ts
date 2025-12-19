@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { dbExtended } from "@/lib/db-extended";
 import { requireOrganizer, requireOwnershipOrAdmin } from "@/lib/api-auth";
@@ -8,6 +8,7 @@ import {
   validationErrorResponse,
   notFoundResponse,
 } from "@/lib/api-utils";
+import { corsHeaders, handleCORS } from "@/middleware-api";
 
 const createTransactionSchema = z.object({
   eventId: z.string().min(1, "Event ID is required"),
@@ -19,8 +20,10 @@ const createTransactionSchema = z.object({
 });
 
 // Handle CORS
-export async function OPTIONS() {
-  return handleOptions();
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { 
+    headers: corsHeaders() 
+  });
 }
 
 // GET /api/v1/transactions - List transactions
@@ -80,10 +83,14 @@ export async function GET(request: NextRequest) {
       }
     );
     
-    return withCORS(response);
+    
   } catch (error) {
     console.error("Get transactions error:", error);
-    return withCORS(errorResponse("Failed to retrieve transactions", 500));
+    const errorResp = errorResponse("Failed to retrieve transactions", 500);
+    Object.entries(corsHeaders()).forEach(([key, value]) => {
+      if (value) errorResp.headers.set(key, value);
+    });
+    return errorResp;
   }
 }
 
@@ -96,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     const validated = createTransactionSchema.safeParse(body);
     if (!validated.success) {
-      return validationErrorResponse(validated.error.errors);
+      return validationErrorResponse(validated.error);
     }
 
     // Verify event exists
@@ -161,10 +168,13 @@ export async function POST(request: NextRequest) {
       undefined
     );
     
-    return withCORS(response);
   } catch (error) {
     console.error("Create transaction error:", error);
-    return withCORS(errorResponse("Failed to create transaction", 500));
+    const errorResp = errorResponse("Failed to create transaction", 500);
+    Object.entries(corsHeaders()).forEach(([key, value]) => {
+      if (value) errorResp.headers.set(key, value);
+    });
+    return errorResp;
   }
 }
 

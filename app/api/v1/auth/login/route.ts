@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { setSession } from "@/lib/auth";
@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
     const validated = loginSchema.safeParse(body);
 
     if (!validated.success) {
-      const errorResp = validationErrorResponse(validated.error.errors);
-      Object.entries(corsHeaders()).forEach(([key, value]) => {
-        errorResp.headers.set(key, value);
+      const errorResp = validationErrorResponse(validated.error);
+      const headers = corsHeaders();
+      Object.entries(headers).forEach(([key, value]) => {
+        if (value) errorResp.headers.set(key, value);
       });
       return errorResp;
     }

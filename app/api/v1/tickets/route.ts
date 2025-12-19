@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const validated = createTicketSchema.safeParse(body);
     if (!validated.success) {
-      return validationErrorResponse(validated.error.errors);
+      return validationErrorResponse(validated.error);
     }
 
     // Verify event exists and belongs to organizer

@@ -16,15 +16,16 @@ const updateTransactionSchema = z.object({
 // GET /api/v1/transactions/[id] - Get single transaction
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const transaction = dbExtended.getTransactionById(params.id);
+    const transaction = dbExtended.getTransactionById(id);
     if (!transaction) {
       return notFoundResponse("Transaction");
     }
@@ -62,15 +63,16 @@ export async function GET(
 // PUT /api/v1/transactions/[id] - Update transaction (e.g., confirm payment, refund)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const transaction = dbExtended.getTransactionById(params.id);
+    const transaction = dbExtended.getTransactionById(id);
     if (!transaction) {
       return notFoundResponse("Transaction");
     }
@@ -87,7 +89,7 @@ export async function PUT(
     const body = await request.json();
     const validated = updateTransactionSchema.safeParse(body);
     if (!validated.success) {
-      return validationErrorResponse(validated.error.errors);
+      return validationErrorResponse(validated.error.issues);
     }
 
     // Handle refund logic
@@ -107,10 +109,7 @@ export async function PUT(
       // Just update the status
     }
 
-    const updatedTransaction = dbExtended.updateTransaction(
-      params.id,
-      validated.data
-    );
+    const updatedTransaction = dbExtended.updateTransaction(id, validated.data);
     if (!updatedTransaction) {
       return notFoundResponse("Transaction");
     }

@@ -1,25 +1,30 @@
 import { NextRequest } from "next/server";
 import { dbExtended } from "@/lib/db-extended";
 import { requireAdmin } from "@/lib/api-auth";
-import { successResponse, errorResponse, notFoundResponse } from "@/lib/api-utils";
+import {
+  successResponse,
+  errorResponse,
+  notFoundResponse,
+} from "@/lib/api-utils";
 
 // POST /api/v1/admin/events/[id]/approve - Approve event (admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireAdmin(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const event = dbExtended.getEventById(params.id);
+    const event = dbExtended.getEventById(id);
     if (!event) {
       return notFoundResponse("Event");
     }
 
-    const updatedEvent = dbExtended.updateEvent(params.id, {
+    const updatedEvent = dbExtended.updateEvent(id, {
       approved: true,
       status: event.status === "draft" ? "active" : event.status,
     });
@@ -42,4 +47,3 @@ export async function POST(
     return errorResponse("Failed to approve event", 500);
   }
 }
-

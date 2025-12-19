@@ -326,10 +326,18 @@ export default async function OrganizerDashboardPage() {
             <div className="rounded-xl bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 px-4 py-2.5 text-xs">
               <p className="text-slate-400 mb-1">Account Status</p>
               <p className={`font-bold ${
-                session?.status === "approved" ? "text-emerald-300" : 
-                session?.status === "pending" ? "text-amber-300" : "text-red-300"
+                session?.status === "approved" 
+                  ? "text-emerald-300" 
+                  : session?.status === "suspended" 
+                    ? "text-amber-300" 
+                    : "text-red-300"
               }`}>
-                {session?.status === "approved" ? "✓ Approved" : session?.status === "pending" ? "⏳ Pending Approval" : "⚠ Suspended"}
+                {session?.status === "approved" 
+                  ? "✓ Approved" 
+                  : session?.status === "suspended" 
+                    ? "⏳ Pending Approval" 
+                    : "⚠ Suspended"
+                }
               </p>
             </div>
             <div className="rounded-xl bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 px-4 py-2.5 text-xs">

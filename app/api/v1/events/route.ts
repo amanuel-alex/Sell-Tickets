@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { dbExtended } from "@/lib/db-extended";
 import { requireOrganizer, requireAdmin } from "@/lib/api-auth";
@@ -8,6 +8,7 @@ import {
   validationErrorResponse,
   notFoundResponse,
 } from "@/lib/api-utils";
+import { corsHeaders, handleCORS } from "@/middleware-api";
 
 const createEventSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const validated = createEventSchema.safeParse(body);
     if (!validated.success) {
-      return validationErrorResponse(validated.error.errors);
+      return validationErrorResponse(validated.error);
     }
 
     // Validate dates
@@ -157,12 +158,6 @@ export async function POST(request: NextRequest) {
       undefined
     );
     
-    // Add CORS headers
-    Object.entries(corsHeaders()).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
-    
-    return response;
   } catch (error) {
     console.error("Create event error:", error);
     const errorResp = errorResponse("Failed to create event", 500);

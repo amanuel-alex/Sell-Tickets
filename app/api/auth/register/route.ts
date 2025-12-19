@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { setSession } from "@/lib/auth";
+import { corsHeaders, handleCORS } from "@/middleware-api";
+import {
+  successResponse,
+  errorResponse,
+  validationErrorResponse,
+} from "@/lib/api-utils";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -13,37 +19,49 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const cors = handleCORS(request);
+  if (cors) return cors;
+
   try {
     const body = await request.json();
-    const validated = registerSchema.parse(body);
+    const validated = registerSchema.safeParse(body);
+
+    if (!validated.success) {
+      return validationErrorResponse(validated.error);
+    }
 
     // Check if user already exists
-    const existingUser = db.findUser(validated.email);
+    const existingUser = db.findUser(validated.data.email);
     if (existingUser) {
-      return NextResponse.json(
-        { error: "User with this email already exists" },
-        { status: 400 }
-      );
+      const errorResp = errorResponse("User with this email already exists", 400);
+      Object.entries(corsHeaders()).forEach(([key, value]) => {
+        if (value) errorResp.headers.set(key, value);
+      });
+      return errorResp;
     }
 
     // Security: Only allow organizer registration through public API
     // Admin accounts must be created by existing admins or through backend
-    if (validated.role !== "organizer") {
-      return NextResponse.json(
-        { error: "Admin registration is not allowed through public API" },
-        { status: 403 }
+    if (validated.data.role !== "organizer") {
+      const errorResp = errorResponse(
+        "Admin registration is not allowed through public API",
+        403
       );
+      Object.entries(corsHeaders()).forEach(([key, value]) => {
+        if (value) errorResp.headers.set(key, value);
+      });
+      return errorResp;
     }
 
-    // Create user (always organizer, always pending approval)
+    // Create user with pending status (needs admin approval)
     const user = await db.createUser({
-      email: validated.email,
-      phone: validated.phone,
-      password: validated.password,
-      role: "organizer",
-      name: validated.name,
-      businessName: validated.businessName,
-      status: "pending", // All organizers require approval
+      email: validated.data.email,
+      phone: validated.data.phone,
+      password: validated.data.password, // In a real app, hash the password
+      name: validated.data.name,
+      businessName: validated.data.businessName,
+      role: validated.data.role,
+      status: "pending",
       emailVerified: false,
     });
 
@@ -59,9 +77,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(
+    // Create success response
+    const response = successResponse(
       {
-        success: true,
         user: {
           id: user.id,
           email: user.email,
@@ -73,24 +91,37 @@ export async function POST(request: NextRequest) {
         },
         requiresApproval: user.status === "pending",
       },
-      { status: 201 }
+      "Registration successful"
     );
+
+    // Add CORS headers
+    Object.entries(corsHeaders()).forEach(([key, value]) => {
+      if (value) response.headers.set(key, value);
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
+      return validationErrorResponse(error);
     }
 
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    console.error("Registration error:", error);
+    const errorResp = errorResponse(
+      error instanceof Error ? error.message : "Internal server error",
+      error instanceof Error ? 400 : 500
     );
+    
+    Object.entries(corsHeaders()).forEach(([key, value]) => {
+      if (value) errorResp.headers.set(key, value);
+    });
+    
+    return errorResp;
   }
 }
 
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    headers: corsHeaders()
+  });
+}

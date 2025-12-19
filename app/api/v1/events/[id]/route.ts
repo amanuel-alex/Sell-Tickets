@@ -26,15 +26,16 @@ const updateEventSchema = z.object({
 // GET /api/v1/events/[id] - Get single event
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const event = dbExtended.getEventById(params.id);
+    const event = dbExtended.getEventById(id);
     if (!event) {
       return notFoundResponse("Event");
     }
@@ -74,15 +75,16 @@ export async function GET(
 // PUT /api/v1/events/[id] - Update event
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const event = dbExtended.getEventById(params.id);
+    const event = dbExtended.getEventById(id);
     if (!event) {
       return notFoundResponse("Event");
     }
@@ -99,7 +101,7 @@ export async function PUT(
     const body = await request.json();
     const validated = updateEventSchema.safeParse(body);
     if (!validated.success) {
-      return validationErrorResponse(validated.error.errors);
+      return validationErrorResponse(validated.error.issues);
     }
 
     // Validate dates if provided
@@ -117,7 +119,7 @@ export async function PUT(
     }
 
     // Update event
-    const updatedEvent = dbExtended.updateEvent(params.id, validated.data);
+    const updatedEvent = dbExtended.updateEvent(id, validated.data);
     if (!updatedEvent) {
       return notFoundResponse("Event");
     }
@@ -148,15 +150,16 @@ export async function PUT(
 // DELETE /api/v1/events/[id] - Delete event
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const event = dbExtended.getEventById(params.id);
+    const event = dbExtended.getEventById(id);
     if (!event) {
       return notFoundResponse("Event");
     }
@@ -170,8 +173,8 @@ export async function DELETE(
       return ownershipResult.response;
     }
 
-    const deleted = dbExtended.deleteEvent(params.id);
-    if (!deleted) {
+    const success = dbExtended.deleteEvent(id);
+    if (!success) {
       return notFoundResponse("Event");
     }
 

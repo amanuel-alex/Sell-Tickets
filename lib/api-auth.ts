@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { unauthorizedResponse, forbiddenResponse } from "@/lib/api-utils";
 
@@ -9,7 +9,7 @@ export interface ApiContext {
     role: "organizer" | "admin";
     name?: string;
     businessName?: string;
-    status: "pending" | "approved" | "suspended";
+    status: "pending" | "approved" | "suspended" | "rejected";
   };
   isAdmin: boolean;
   isOrganizer: boolean;

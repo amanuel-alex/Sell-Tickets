@@ -64,12 +64,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // Use the first error message if available, otherwise use a generic message
+      const errorMessage = error.issues.length > 0 
+        ? error.issues[0].message 
+        : 'Invalid request data';
       return NextResponse.json(
-        { error: error.errors[0].message },
+        { error: errorMessage },
         { status: 400 }
       );
     }
 
+    console.error('Error updating organizer status:', error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

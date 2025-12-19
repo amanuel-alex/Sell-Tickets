@@ -54,12 +54,27 @@ export function notFoundResponse(resource: string = "Resource"): NextResponse<Ap
   return errorResponse(`${resource} not found.`, 404);
 }
 
-export function validationErrorResponse(errors: any): NextResponse<ApiResponse> {
+export function validationErrorResponse(zodError: any): NextResponse<ApiResponse> {
+  // Handle both Zod v3 and v4 error formats
+  const errors = Array.isArray(zodError.issues) 
+    ? zodError.issues 
+    : Array.isArray(zodError.errors) 
+      ? zodError.errors 
+      : [];
+      
+  const errorMessage = errors[0]?.message || 'Validation failed';
+  
   return NextResponse.json(
     {
       success: false,
-      error: "Validation failed",
-      data: { errors },
+      error: errorMessage,
+      data: { 
+        errors: errors.map((e: any) => ({
+          path: e.path?.join('.') || '',
+          message: e.message,
+          code: e.code
+        }))
+      },
     },
     { status: 422 }
   );

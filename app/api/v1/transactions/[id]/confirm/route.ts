@@ -5,10 +5,11 @@ import { errorResponse, successResponse, notFoundResponse } from "@/lib/api-util
 // POST /api/v1/transactions/[id]/confirm - Confirm payment (public endpoint for payment gateways)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
-    const transaction = dbExtended.getTransactionById(params.id);
+    const transaction = dbExtended.getTransactionById(id);
     if (!transaction) {
       return notFoundResponse("Transaction");
     }
@@ -21,7 +22,7 @@ export async function POST(
     }
 
     // Update transaction to completed
-    const updatedTransaction = dbExtended.updateTransaction(params.id, {
+    const updatedTransaction = dbExtended.updateTransaction(id, {
       status: "completed",
     });
 

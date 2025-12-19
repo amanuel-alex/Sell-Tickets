@@ -6,20 +6,21 @@ import { successResponse, errorResponse, notFoundResponse } from "@/lib/api-util
 // POST /api/v1/admin/events/[id]/reject - Reject event (admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireAdmin(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const event = dbExtended.getEventById(params.id);
+    const event = dbExtended.getEventById(id);
     if (!event) {
       return notFoundResponse("Event");
     }
 
-    const updatedEvent = dbExtended.updateEvent(params.id, {
+    const updatedEvent = dbExtended.updateEvent(id, {
       approved: false,
       status: "cancelled",
     });

@@ -18,15 +18,16 @@ const updateTicketSchema = z.object({
 // GET /api/v1/tickets/[id] - Get single ticket
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const ticket = dbExtended.getTicketById(params.id);
+    const ticket = dbExtended.getTicketById(id);
     if (!ticket) {
       return notFoundResponse("Ticket");
     }
@@ -62,15 +63,16 @@ export async function GET(
 // PUT /api/v1/tickets/[id] - Update ticket
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const ticket = dbExtended.getTicketById(params.id);
+    const ticket = dbExtended.getTicketById(id);
     if (!ticket) {
       return notFoundResponse("Ticket");
     }
@@ -87,7 +89,7 @@ export async function PUT(
     const body = await request.json();
     const validated = updateTicketSchema.safeParse(body);
     if (!validated.success) {
-      return validationErrorResponse(validated.error.errors);
+      return validationErrorResponse(validated.error.issues);
     }
 
     // Validate quantity is not less than sold
@@ -100,7 +102,7 @@ export async function PUT(
       }
     }
 
-    const updatedTicket = dbExtended.updateTicket(params.id, validated.data);
+    const updatedTicket = dbExtended.updateTicket(id, validated.data);
     if (!updatedTicket) {
       return notFoundResponse("Ticket");
     }
@@ -127,15 +129,16 @@ export async function PUT(
 // DELETE /api/v1/tickets/[id] - Delete ticket
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   try {
     const authResult = await requireOrganizer(request);
     if ("response" in authResult) {
       return authResult.response;
     }
 
-    const ticket = dbExtended.getTicketById(params.id);
+    const ticket = dbExtended.getTicketById(id);
     if (!ticket) {
       return notFoundResponse("Ticket");
     }
@@ -157,8 +160,8 @@ export async function DELETE(
       );
     }
 
-    const deleted = dbExtended.deleteTicket(params.id);
-    if (!deleted) {
+    const success = dbExtended.deleteTicket(id);
+    if (!success) {
       return notFoundResponse("Ticket");
     }
 
