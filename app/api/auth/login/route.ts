@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { setSession } from "@/lib/auth";
+import { corsHeaders, handleCORS } from "@/middleware-api";
+import { successResponse, errorResponse, validationErrorResponse } from "@/lib/api-utils";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or phone is required"),
@@ -92,21 +94,19 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      // Use the first error message if available, otherwise use a generic message
-      const errorMessage = error.issues.length > 0 
-        ? error.issues[0].message 
-        : 'Invalid request data';
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: 400 }
-      );
+      const errorResp = validationErrorResponse(error);
+      Object.entries(corsHeaders()).forEach(([key, value]) => {
+        if (value) errorResp.headers.set(key, value);
+      });
+      return errorResp;
     }
 
     console.error('Login error:', error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    const errorResp = errorResponse("Internal server error", 500);
+    Object.entries(corsHeaders()).forEach(([key, value]) => {
+      if (value) errorResp.headers.set(key, value);
+    });
+    return errorResp;
   }
 }
 

@@ -11,6 +11,7 @@ export interface AuthUser {
   name?: string;
   businessName?: string;
   status: "pending" | "approved" | "suspended";
+  [key: string]: any; // Add index signature to satisfy JWTPayload
 }
 
 export async function encrypt(payload: AuthUser): Promise<string> {
